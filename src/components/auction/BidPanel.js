@@ -28,6 +28,14 @@ export default function BidPanel({
     initialFormState
   )
   const formRef = useRef(null)
+  const prevStartedAt = useRef(initialSession?.started_at)
+
+  useEffect(() => {
+    if (session?.started_at !== prevStartedAt.current) {
+      setBids([])
+      prevStartedAt.current = session?.started_at
+    }
+  }, [session?.started_at])
 
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 1000)

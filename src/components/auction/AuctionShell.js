@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { auctionMeta } from '@/data/items'
@@ -13,6 +13,14 @@ export default function AuctionShell({ initialSession, initialBids }) {
   const [session, setSession] = useState(initialSession)
   const [bids, setBids] = useState(initialBids)
   const [now, setNow] = useState(() => Date.now())
+  const prevStartedAt = useRef(initialSession?.started_at)
+
+  useEffect(() => {
+    if (session?.started_at !== prevStartedAt.current) {
+      setBids([])
+      prevStartedAt.current = session?.started_at
+    }
+  }, [session?.started_at])
 
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 1000)

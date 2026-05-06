@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition, useMemo } from 'react'
+import { useState, useEffect, useTransition, useMemo, useRef } from 'react'
 import { items } from '@/data/items'
 import { startBidding, endBidding } from '@/lib/actions/session'
 import { adminLogout } from '@/lib/actions/admin'
@@ -43,6 +43,14 @@ export default function AdminPanel({ initialSession, initialBids }) {
   const [session, setSession] = useState(initialSession)
   const [bids, setBids] = useState(initialBids)
   const [now, setNow] = useState(() => Date.now())
+  const prevStartedAt = useRef(initialSession?.started_at)
+
+  useEffect(() => {
+    if (session?.started_at !== prevStartedAt.current) {
+      setBids([])
+      prevStartedAt.current = session?.started_at
+    }
+  }, [session?.started_at])
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {

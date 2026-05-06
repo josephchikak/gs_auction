@@ -22,6 +22,14 @@ export const startBidding = async () => {
   const session = await getSessionRow(supabase)
   if (!session) return { error: 'No session row found' }
 
+  // Wipe any prior bids so each (re)start begins with a clean slate
+  const { error: clearError } = await supabase
+    .from('bids')
+    .delete()
+    .gte('created_at', '1970-01-01T00:00:00Z')
+
+  if (clearError) return { error: clearError.message }
+
   const { error } = await supabase
     .from('auction_session')
     .update({
