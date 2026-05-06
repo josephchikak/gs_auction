@@ -7,17 +7,17 @@ import { adminLogout } from '@/lib/actions/admin'
 import { createClient } from '@/lib/supabase/client'
 import { formatNaira } from '@/lib/auction/session'
 
-const getSessionState = (session) => {
+const getSessionState = (session, now) => {
   if (!session?.started_at) return 'not_started'
   if (session.ended_manually) return 'ended'
   const endsAt = new Date(session.started_at).getTime() + session.duration_minutes * 60 * 1000
-  return Date.now() < endsAt ? 'active' : 'ended'
+  return now < endsAt ? 'active' : 'ended'
 }
 
-const computeRemaining = (session) => {
+const computeRemaining = (session, now) => {
   if (!session?.started_at) return null
   const endsAt = new Date(session.started_at).getTime() + session.duration_minutes * 60 * 1000
-  return Math.max(0, endsAt - Date.now())
+  return Math.max(0, endsAt - now)
 }
 
 const formatTime = (ms) => {
@@ -42,7 +42,7 @@ const buildHighestMap = (bids) => {
 export default function AdminPanel({ initialSession, initialBids }) {
   const [session, setSession] = useState(initialSession)
   const [bids, setBids] = useState(initialBids)
-  const [remaining, setRemaining] = useState(computeRemaining(initialSession))
+  const [now, setNow] = useState(() => Date.now())
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -71,17 +71,12 @@ export default function AdminPanel({ initialSession, initialBids }) {
   }, [])
 
   useEffect(() => {
-    if (!session?.started_at || session.ended_manually) {
-      setRemaining(computeRemaining(session))
-      return
-    }
-    const tick = () => setRemaining(computeRemaining(session))
-    tick()
-    const interval = setInterval(tick, 1000)
+    const interval = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(interval)
-  }, [session])
+  }, [])
 
-  const state = getSessionState(session)
+  const state = getSessionState(session, now)
+  const remaining = computeRemaining(session, now)
   const highest = useMemo(() => buildHighestMap(bids), [bids])
 
   const handleStart = () =>
