@@ -36,6 +36,12 @@ export default function Home() {
           </Link>
         </div>
       </div>
+
+      <p className='cursoor-pointer absolute bottom-4 w-full text-center text-[8px] text-black/80 sm:bottom-6'> 
+        designed and developed by <a href='https://www.instagram.com/raytheboffin/' className='underline text-primary' target='_blank' rel='noopener noreferrer'>
+          raytheboffin
+        </a>
+      </p>
     </main>
   )
 }

@@ -7,7 +7,7 @@ export default function FloatingObject() {
 
   return (
     <Center>
-      <primitive rotation={[0, 0.3, 0]} object={scene} />
+      <primitive  rotation={[0, 0.3, 0]} object={scene} />
     </Center>
   )
 }
