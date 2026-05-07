@@ -140,7 +140,7 @@ export default function AdminPanel({ initialSession, initialBids }) {
               <button
                 onClick={handleStart}
                 disabled={isPending}
-                className='rounded-lg bg-emerald-600 px-6 py-3 font-semibold text-black transition hover:bg-emerald-600 disabled:opacity-50'
+                className=' bg-emerald-600 px-6 py-3 font-semibold text-black transition hover:bg-emerald-600 disabled:opacity-50'
               >
                 Start Bidding
               </button>
