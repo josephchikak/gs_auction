@@ -147,14 +147,7 @@ export default function BidPanel({
                   </p>
                 </>
               ) : (
-                <>
-                  <p className='text-xs uppercase tracking-widest text-zinc-500'>
-                    Starting bid
-                  </p>
-                  <p className='mt-1 text-3xl font-bold text-zinc-900'>
-                    {formatNaira(item.startingBid)}
-                  </p>
-                </>
+                <p className='mt-1 text-sm text-zinc-500'>No bids yet</p>
               )}
             </div>
 

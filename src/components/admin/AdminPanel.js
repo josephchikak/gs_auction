@@ -46,13 +46,13 @@ export default function AdminPanel({ initialSession, initialBids }) {
   const prevStartedAt = useRef(initialSession?.started_at)
 
   useEffect(() => {
-    if (
-      session?.started_at &&
-      session.started_at !== prevStartedAt.current
-    ) {
+    const prev = prevStartedAt.current
+    prevStartedAt.current = session?.started_at
+    if (!session?.started_at && prev) {
+      setBids([])
+    } else if (session?.started_at && session.started_at !== prev) {
       setBids([])
     }
-    prevStartedAt.current = session?.started_at
   }, [session?.started_at])
   const [isPending, startTransition] = useTransition()
 
@@ -140,9 +140,9 @@ export default function AdminPanel({ initialSession, initialBids }) {
               <button
                 onClick={handleStart}
                 disabled={isPending}
-                className=' bg-emerald-600 px-6 py-3 font-semibold text-black transition hover:bg-emerald-600 disabled:opacity-50'
+                className='bg-emerald-600 px-6 py-3 font-semibold text-black transition hover:bg-emerald-500 disabled:opacity-50'
               >
-                Start Bidding
+                Start Bid
               </button>
             )}
             {state === 'active' && (
@@ -150,7 +150,7 @@ export default function AdminPanel({ initialSession, initialBids }) {
                 <button
                   onClick={handleEnd}
                   disabled={isPending}
-                  className=' bg-red-500 text-black px-6 py-3 font-semibold  transition hover:bg-red-400 disabled:opacity-50'
+                  className='bg-red-500 text-black px-6 py-3 font-semibold transition hover:bg-red-400 disabled:opacity-50'
                 >
                   End Early
                 </button>
@@ -159,30 +159,18 @@ export default function AdminPanel({ initialSession, initialBids }) {
                   disabled={isPending}
                   className='bg-zinc-700 text-primary px-6 py-3 font-semibold transition hover:bg-zinc-600 disabled:opacity-50'
                 >
-                  Stop Bidding
+                  Reset Bids
                 </button>
               </>
             )}
             {state === 'ended' && (
-              <div className='flex flex-col items-end gap-2'>
-                <p className='text-sm text-primary/60'>Session has ended</p>
-                <div className='flex gap-2'>
-                  <button
-                    onClick={handlePause}
-                    disabled={isPending}
-                    className='bg-zinc-700 text-primary px-6 py-3 font-semibold transition hover:bg-zinc-600 disabled:opacity-50'
-                  >
-                    Stop Bidding
-                  </button>
-                  <button
-                    onClick={handleStart}
-                    disabled={isPending}
-                    className=' bg-primary px-6 py-3 font-semibold text-black transition cursor-pointer hover:bg-primary disabled:opacity-50'
-                  >
-                    Restart Bidding
-                  </button>
-                </div>
-              </div>
+              <button
+                onClick={handlePause}
+                disabled={isPending}
+                className='bg-zinc-700 text-primary px-6 py-3 font-semibold transition hover:bg-zinc-600 disabled:opacity-50'
+              >
+                Reset Bids
+              </button>
             )}
           </div>
         </div>

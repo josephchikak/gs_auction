@@ -42,14 +42,7 @@ export default function ItemCard({ item, highestBid }) {
               <p className='text-xs text-zinc-600'>by {highestBid.bidder_name}</p>
             </>
           ) : (
-            <>
-              <p className='text-xs uppercase tracking-widest text-zinc-500'>
-                Starting bid
-              </p>
-              <p className='text-xl font-bold text-zinc-900'>
-                {formatNaira(item.startingBid)}
-              </p>
-            </>
+            <p className='text-sm text-zinc-500'>No bids yet</p>
           )}
         </div>
       </div>
