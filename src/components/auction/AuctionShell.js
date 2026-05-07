@@ -16,10 +16,13 @@ export default function AuctionShell({ initialSession, initialBids }) {
   const prevStartedAt = useRef(initialSession?.started_at)
 
   useEffect(() => {
-    if (session?.started_at !== prevStartedAt.current) {
+    if (
+      session?.started_at &&
+      session.started_at !== prevStartedAt.current
+    ) {
       setBids([])
-      prevStartedAt.current = session?.started_at
     }
+    prevStartedAt.current = session?.started_at
   }, [session?.started_at])
 
   useEffect(() => {
@@ -58,14 +61,16 @@ export default function AuctionShell({ initialSession, initialBids }) {
   if (state === 'not_started') {
     return (
       <div className='flex min-h-dvh flex-col items-center justify-center px-6 text-center'>
-        <Image
-          src='/logo.png'
-          alt={auctionMeta.title}
-          width={200}
-          height={200}
-          priority
-          className='h-32 w-32 sm:h-40 sm:w-40'
-        />
+        <Link href='/' aria-label='Home'>
+          <Image
+            src='/logo.png'
+            alt={auctionMeta.title}
+            width={200}
+            height={200}
+            priority
+            className='h-32 w-32 sm:h-40 sm:w-40'
+          />
+        </Link>
         <h1 className='mt-6 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl'>
           Bidding hasn&apos;t started yet
         </h1>
@@ -82,14 +87,16 @@ export default function AuctionShell({ initialSession, initialBids }) {
   if (state === 'ended') {
     return (
       <div className='flex min-h-dvh flex-col items-center justify-center px-6 text-center'>
-        <Image
-          src='/logo.png'
-          alt={auctionMeta.title}
-          width={200}
-          height={200}
-          priority
-          className='h-32 w-32 sm:h-40 sm:w-40'
-        />
+        <Link href='/' aria-label='Home'>
+          <Image
+            src='/logo.png'
+            alt={auctionMeta.title}
+            width={200}
+            height={200}
+            priority
+            className='h-32 w-32 sm:h-40 sm:w-40'
+          />
+        </Link>
         <h1 className='mt-6 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl'>
           Bidding has ended
         </h1>

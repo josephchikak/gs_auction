@@ -45,6 +45,28 @@ export const startBidding = async () => {
   return { success: true }
 }
 
+export const pauseBidding = async () => {
+  if (!(await isAdmin())) return { error: 'Unauthorized' }
+
+  const supabase = createAdminClient()
+  const session = await getSessionRow(supabase)
+  if (!session) return { error: 'No session row found' }
+
+  const { error } = await supabase
+    .from('auction_session')
+    .update({
+      started_at: null,
+      ended_manually: false
+    })
+    .eq('id', session.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin')
+  revalidatePath('/auction')
+  return { success: true }
+}
+
 export const endBidding = async () => {
   if (!(await isAdmin())) return { error: 'Unauthorized' }
 

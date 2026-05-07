@@ -28,14 +28,16 @@ export default async function WinnersPage() {
     <div className='min-h-dvh px-4 py-8 sm:px-8 sm:py-12'>
       <div className='mx-auto max-w-6xl'>
         <header className='mb-10 flex flex-col items-center text-center'>
-          <Image
-            src='/logo.png'
-            alt={auctionMeta.title}
-            width={160}
-            height={160}
-            priority
-            className='h-24 w-24 sm:h-28 sm:w-28'
-          />
+          <Link href='/' aria-label='Home'>
+            <Image
+              src='/logo.png'
+              alt={auctionMeta.title}
+              width={160}
+              height={160}
+              priority
+              className='h-24 w-24 sm:h-28 sm:w-28'
+            />
+          </Link>
           <h1 className='mt-4 text-3xl font-bold tracking-tight text-zinc-900 sm:text-5xl'>
             Winners
           </h1>

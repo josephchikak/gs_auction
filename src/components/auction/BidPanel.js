@@ -31,10 +31,13 @@ export default function BidPanel({
   const prevStartedAt = useRef(initialSession?.started_at)
 
   useEffect(() => {
-    if (session?.started_at !== prevStartedAt.current) {
+    if (
+      session?.started_at &&
+      session.started_at !== prevStartedAt.current
+    ) {
       setBids([])
-      prevStartedAt.current = session?.started_at
     }
+    prevStartedAt.current = session?.started_at
   }, [session?.started_at])
 
   useEffect(() => {

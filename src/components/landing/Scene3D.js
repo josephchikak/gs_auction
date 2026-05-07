@@ -15,7 +15,7 @@ export default function Scene3D() {
       <Suspense fallback={null}>
         <ambientLight intensity={0.4} />
         <directionalLight position={[5, 5, 5]} intensity={1.2} />
-        <Bounds fit clip margin={1.2} damping={false}>
+        <Bounds fit clip margin={1.2} damping={1.5}>
           <FloatingObject />
         </Bounds>
         <Environment preset='city' />
