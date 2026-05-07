@@ -195,26 +195,38 @@ export default function AdminPanel({ initialSession, initialBids }) {
           return (
             <div
               key={item.id}
-              className='flex items-center justify-between  border border-primary text-primary bg-background p-4'
+              className='border border-primary text-primary bg-background p-4'
             >
-              <div>
-                <p className='font-medium'>{item.name}</p>
-                <p className='text-sm text-primary/50'>
-                  Starting: {formatNaira(item.startingBid)}
-                </p>
-              </div>
-              <div className='text-right'>
-                {top ? (
-                  <>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <p className='font-medium'>{item.name}</p>
+                </div>
+                <div className='text-right'>
+                  {top ? (
                     <p className='font-semibold text-primary'>
                       {formatNaira(top.amount)}
                     </p>
-                    <p className='text-sm text-primary/60'>{top.bidder_name}</p>
-                  </>
-                ) : (
-                  <p className='text-sm text-black'>No bids</p>
-                )}
+                  ) : (
+                    <p className='text-sm text-primary/50'>No bids</p>
+                  )}
+                </div>
               </div>
+              {top && state === 'ended' && (
+                <div className='mt-3 border-t border-primary/20 pt-3 grid grid-cols-3 gap-2 text-sm'>
+                  <div>
+                    <p className='text-xs uppercase tracking-widest text-primary/50'>Winner</p>
+                    <p className='font-medium'>{top.bidder_name}</p>
+                  </div>
+                  <div>
+                    <p className='text-xs uppercase tracking-widest text-primary/50'>Email</p>
+                    <p className='font-medium'>{top.bidder_email}</p>
+                  </div>
+                  <div>
+                    <p className='text-xs uppercase tracking-widest text-primary/50'>Phone</p>
+                    <p className='font-medium'>{top.bidder_phone}</p>
+                  </div>
+                </div>
+              )}
             </div>
           )
         })}
