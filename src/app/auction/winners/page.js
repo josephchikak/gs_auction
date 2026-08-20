@@ -1,28 +1,20 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { items, auctionMeta } from '@/data/items'
+import { auctionMeta } from '@/data/items'
+import { getAuctionItems } from '@/lib/auction/items'
 import { createClient } from '@/lib/supabase/server'
-import {
-  getSessionState,
-  buildHighestBidMap,
-  formatNaira
-} from '@/lib/auction/session'
+import { buildAcceptedPurchaseMap, formatNaira } from '@/lib/auction/session'
 
 export const dynamic = 'force-dynamic'
 
 export default async function WinnersPage() {
   const supabase = await createClient()
 
-  const [{ data: session }, { data: bids }] = await Promise.all([
-    supabase.from('auction_session').select('*').limit(1).single(),
-    supabase.from('bids').select('*')
-  ])
+  const { data: bids } = await supabase.from('bids').select('*')
 
-  const state = getSessionState(session)
-  if (state !== 'ended') redirect('/auction')
+  const items = await getAuctionItems()
 
-  const highest = buildHighestBidMap(bids ?? [])
+  const sold = buildAcceptedPurchaseMap(bids ?? [])
 
   return (
     <div className='min-h-dvh px-4 py-8 sm:px-8 sm:py-12'>
@@ -39,7 +31,7 @@ export default async function WinnersPage() {
             />
           </Link>
           <h1 className='mt-4 text-3xl font-bold tracking-tight text-zinc-900 sm:text-5xl'>
-            Winners
+            Sold Pieces
           </h1>
           <p className='mt-2 text-sm text-zinc-700 sm:text-base'>
             {auctionMeta.title}
@@ -51,19 +43,17 @@ export default async function WinnersPage() {
 
         <div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
           {items.map((item) => {
-            const winner = highest.get(item.id)
+            const sale = sold.get(item.id)
             return (
               <div
                 key={item.id}
                 className='flex flex-col overflow-hidden border border-zinc-900/15 bg-white/40 backdrop-blur'
               >
                 <div className='relative aspect-square overflow-hidden bg-zinc-900/5'>
-                  <Image
+                  <img
                     src={item.image}
                     alt={item.name}
-                    fill
-                    sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
-                    className='object-cover'
+                    className='absolute inset-0 h-full w-full object-cover'
                   />
                 </div>
 
@@ -78,25 +68,22 @@ export default async function WinnersPage() {
                   </div>
 
                   <div className='border-t border-zinc-900/10 pt-3'>
-                    {winner ? (
+                    {sale ? (
                       <>
                         <p className='text-xs uppercase tracking-widest text-zinc-500'>
-                          Winning bid
+                          Sold for
                         </p>
                         <p className='text-2xl font-bold text-primary'>
-                          {formatNaira(winner.amount)}
-                        </p>
-                        <p className='mt-1 text-sm text-zinc-700'>
-                          {winner.bidder_name}
+                          {formatNaira(sale.amount)}
                         </p>
                       </>
                     ) : (
                       <>
                         <p className='text-xs uppercase tracking-widest text-zinc-500'>
-                          Result
+                          Status
                         </p>
                         <p className='text-base text-zinc-600'>
-                          No bids placed
+                          Available
                         </p>
                       </>
                     )}

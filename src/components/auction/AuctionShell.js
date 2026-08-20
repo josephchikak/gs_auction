@@ -1,51 +1,35 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { auctionMeta } from '@/data/items'
 import { createClient } from '@/lib/supabase/client'
-import { getSessionState, getRemainingMs } from '@/lib/auction/session'
-import CountdownTimer from './CountdownTimer'
 import AuctionGrid from './AuctionGrid'
 
-export default function AuctionShell({ initialSession, initialBids }) {
-  const [session, setSession] = useState(initialSession)
+export default function AuctionShell({ initialBids, items }) {
   const [bids, setBids] = useState(initialBids)
-  const [now, setNow] = useState(() => Date.now())
-  const prevStartedAt = useRef(initialSession?.started_at)
-
-  useEffect(() => {
-    if (
-      session?.started_at &&
-      session.started_at !== prevStartedAt.current
-    ) {
-      setBids([])
-    }
-    prevStartedAt.current = session?.started_at
-  }, [session?.started_at])
-
-  useEffect(() => {
-    const tick = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(tick)
-  }, [])
 
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
-      .channel('auction-shell')
+      .channel('shop-shell')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'auction_session' },
+        { event: '*', schema: 'public', table: 'bids' },
         (payload) => {
-          if (payload.new) setSession(payload.new)
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'bids' },
-        (payload) => {
-          setBids((prev) => [payload.new, ...prev])
+          if (payload.eventType === 'INSERT') {
+            setBids((prev) => [payload.new, ...prev])
+            return
+          }
+
+          if (payload.eventType === 'UPDATE') {
+            setBids((prev) =>
+              prev.map((bid) =>
+                bid.id === payload.new.id ? payload.new : bid
+              )
+            )
+          }
         }
       )
       .subscribe()
@@ -54,64 +38,6 @@ export default function AuctionShell({ initialSession, initialBids }) {
       supabase.removeChannel(channel)
     }
   }, [])
-
-  const state = getSessionState(session, now)
-  const remaining = getRemainingMs(session, now)
-
-  if (state === 'not_started') {
-    return (
-      <div className='flex min-h-dvh flex-col items-center justify-center px-6 text-center'>
-        <Link href='/' aria-label='Home'>
-          <Image
-            src='/logo.png'
-            alt={auctionMeta.title}
-            width={200}
-            height={200}
-            priority
-            className='h-32 w-32 sm:h-40 sm:w-40'
-          />
-        </Link>
-        <h1 className='mt-6 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl'>
-          Bidding hasn&apos;t started yet
-        </h1>
-        <p className='mt-3 max-w-md text-sm text-zinc-700 sm:text-base'>
-          Stay tuned — the auction will go live when the host opens the floor.
-        </p>
-        <p className='mt-6 text-xs uppercase tracking-widest text-zinc-500'>
-          {auctionMeta.note}
-        </p>
-      </div>
-    )
-  }
-
-  if (state === 'ended') {
-    return (
-      <div className='flex min-h-dvh flex-col items-center justify-center px-6 text-center'>
-        <Link href='/' aria-label='Home'>
-          <Image
-            src='/logo.png'
-            alt={auctionMeta.title}
-            width={200}
-            height={200}
-            priority
-            className='h-32 w-32 sm:h-40 sm:w-40'
-          />
-        </Link>
-        <h1 className='mt-6 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl'>
-          Bidding has ended
-        </h1>
-        <p className='mt-3 max-w-md text-sm text-zinc-700 sm:text-base'>
-          Thanks for joining. Winners will be announced shortly.
-        </p>
-        <Link
-          href='/auction/winners'
-          className='mt-6 bg-zinc-900 px-8 py-3 text-sm font-semibold text-primary shadow-lg transition hover:bg-zinc-800 active:scale-95'
-        >
-          View Winners
-        </Link>
-      </div>
-    )
-  }
 
   return (
     <div className='min-h-dvh px-4 pb-16 pt-6 sm:px-8 sm:pt-10'>
@@ -133,11 +59,13 @@ export default function AuctionShell({ initialSession, initialBids }) {
             </p>
           </div>
         </Link>
-        <CountdownTimer remaining={remaining} />
+        <p className='max-w-md text-sm text-zinc-700'>
+          Select a piece to request purchase. Admin-approved orders are marked sold.
+        </p>
       </header>
 
       <main className='mx-auto max-w-6xl'>
-        <AuctionGrid bids={bids} />
+        <AuctionGrid bids={bids} items={items} />
       </main>
     </div>
   )

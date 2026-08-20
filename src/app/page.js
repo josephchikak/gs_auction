@@ -32,7 +32,7 @@ export default function Home() {
             href='/auction'
             className=' border-[0.5] px-10 py-4 text-base font-nabla font-semibold text-primary shadow-2xl shadow-black/20 transition hover:bg-zinc-800 active:scale-95 sm:text-lg'
           >
-            Enter Auction
+            View Pieces
           </Link>
         </div>
       </div>

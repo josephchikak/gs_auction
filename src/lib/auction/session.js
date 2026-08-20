@@ -1,23 +1,27 @@
-export const getSessionState = (session, now = Date.now()) => {
-  if (!session?.started_at) return 'not_started'
-  if (session.ended_manually) return 'ended'
-  const endsAt = new Date(session.started_at).getTime() + session.duration_minutes * 60 * 1000
-  return now < endsAt ? 'active' : 'ended'
-}
+export const isAcceptedPurchase = (order) => order.status === 'accepted'
 
-export const getRemainingMs = (session, now = Date.now()) => {
-  if (!session?.started_at) return null
-  const endsAt = new Date(session.started_at).getTime() + session.duration_minutes * 60 * 1000
-  return Math.max(0, endsAt - now)
-}
+export const isPendingPurchase = (order) => order.status === 'pending'
 
-export const buildHighestBidMap = (bids) => {
+export const buildAcceptedPurchaseMap = (orders) => {
   const map = new Map()
-  for (const bid of bids) {
-    const current = map.get(bid.item_id)
-    if (!current || Number(bid.amount) > Number(current.amount)) {
-      map.set(bid.item_id, bid)
+  for (const order of orders) {
+    if (!isAcceptedPurchase(order)) continue
+
+    const current = map.get(order.item_id)
+    if (!current || Number(order.amount) > Number(current.amount)) {
+      map.set(order.item_id, order)
     }
+  }
+  return map
+}
+
+export const buildPendingPurchaseMap = (orders) => {
+  const map = new Map()
+  for (const order of orders) {
+    if (!isPendingPurchase(order)) continue
+
+    const current = map.get(order.item_id) ?? []
+    map.set(order.item_id, [...current, order])
   }
   return map
 }

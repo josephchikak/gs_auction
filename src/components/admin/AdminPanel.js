@@ -1,77 +1,40 @@
 'use client'
 
-import { useState, useEffect, useTransition, useMemo, useRef } from 'react'
-import { items } from '@/data/items'
-import { startBidding, endBidding, pauseBidding } from '@/lib/actions/session'
+import { useState, useEffect, useTransition, useMemo } from 'react'
 import { adminLogout } from '@/lib/actions/admin'
+import { deleteItem } from '@/lib/actions/admin'
+import { acceptPurchase, resetPurchase } from '@/lib/actions/orders'
 import { createClient } from '@/lib/supabase/client'
-import { formatNaira } from '@/lib/auction/session'
+import {
+  buildAcceptedPurchaseMap,
+  buildPendingPurchaseMap,
+  formatNaira
+} from '@/lib/auction/session'
 
-const getSessionState = (session, now) => {
-  if (!session?.started_at) return 'not_started'
-  if (session.ended_manually) return 'ended'
-  const endsAt = new Date(session.started_at).getTime() + session.duration_minutes * 60 * 1000
-  return now < endsAt ? 'active' : 'ended'
-}
-
-const computeRemaining = (session, now) => {
-  if (!session?.started_at) return null
-  const endsAt = new Date(session.started_at).getTime() + session.duration_minutes * 60 * 1000
-  return Math.max(0, endsAt - now)
-}
-
-const formatTime = (ms) => {
-  const total = Math.floor(ms / 1000)
-  const h = Math.floor(total / 3600)
-  const m = Math.floor((total % 3600) / 60)
-  const s = total % 60
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-}
-
-const buildHighestMap = (bids) => {
-  const map = new Map()
-  for (const bid of bids) {
-    const current = map.get(bid.item_id)
-    if (!current || Number(bid.amount) > Number(current.amount)) {
-      map.set(bid.item_id, bid)
-    }
-  }
-  return map
-}
-
-export default function AdminPanel({ initialSession, initialBids }) {
-  const [session, setSession] = useState(initialSession)
+export default function AdminPanel({ initialBids, items }) {
   const [bids, setBids] = useState(initialBids)
-  const [now, setNow] = useState(() => Date.now())
-  const prevStartedAt = useRef(initialSession?.started_at)
-
-  useEffect(() => {
-    const prev = prevStartedAt.current
-    prevStartedAt.current = session?.started_at
-    if (!session?.started_at && prev) {
-      setBids([])
-    } else if (session?.started_at && session.started_at !== prev) {
-      setBids([])
-    }
-  }, [session?.started_at])
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
-      .channel('admin-realtime')
+      .channel('admin-sales-realtime')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'auction_session' },
+        { event: '*', schema: 'public', table: 'bids' },
         (payload) => {
-          if (payload.new) setSession(payload.new)
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'bids' },
-        (payload) => {
-          setBids((prev) => [payload.new, ...prev])
+          if (payload.eventType === 'INSERT') {
+            setBids((prev) => [payload.new, ...prev])
+            return
+          }
+
+          if (payload.eventType === 'UPDATE') {
+            setBids((prev) =>
+              prev.map((bid) =>
+                bid.id === payload.new.id ? payload.new : bid
+              )
+            )
+          }
         }
       )
       .subscribe()
@@ -81,32 +44,10 @@ export default function AdminPanel({ initialSession, initialBids }) {
     }
   }, [])
 
-  useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const state = getSessionState(session, now)
-  const remaining = computeRemaining(session, now)
-  const highest = useMemo(() => buildHighestMap(bids), [bids])
-
-  const handleStart = () =>
-    startTransition(async () => {
-      const result = await startBidding()
-      if (result?.error) console.error(result.error)
-    })
-
-  const handleEnd = () =>
-    startTransition(async () => {
-      const result = await endBidding()
-      if (result?.error) console.error(result.error)
-    })
-
-  const handlePause = () =>
-    startTransition(async () => {
-      const result = await pauseBidding()
-      if (result?.error) console.error(result.error)
-    })
+  const sold = useMemo(() => buildAcceptedPurchaseMap(bids), [bids])
+  const pending = useMemo(() => buildPendingPurchaseMap(bids), [bids])
+  const soldCount = sold.size
+  const pendingCount = bids.filter((bid) => bid.status === 'pending').length
 
   const handleLogout = () => startTransition(() => adminLogout())
 
@@ -125,53 +66,13 @@ export default function AdminPanel({ initialSession, initialBids }) {
       <div className='mb-8 text-primary border border-white/10 bg-background p-6'>
         <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
           <div>
-            <p className='text-sm uppercase tracking-wide text-primary'>Session</p>
-            <p className='mt-1 text-2xl font-semibold capitalize'>
-              {state.replace('_', ' ')}
+            <p className='text-sm uppercase tracking-wide text-primary'>Sales</p>
+            <p className='mt-1 text-2xl font-semibold'>
+              {soldCount} of {items.length} sold
             </p>
-            {state === 'active' && remaining !== null && (
-              <p className='mt-2 font-mono text-xl text-primary'>
-                {formatTime(remaining)}
-              </p>
-            )}
-          </div>
-          <div className='flex gap-3'>
-            {state === 'not_started' && (
-              <button
-                onClick={handleStart}
-                disabled={isPending}
-                className='bg-emerald-600 px-6 py-3 font-semibold text-black transition hover:bg-emerald-500 disabled:opacity-50'
-              >
-                Start Bid
-              </button>
-            )}
-            {state === 'active' && (
-              <>
-                <button
-                  onClick={handleEnd}
-                  disabled={isPending}
-                  className='bg-red-500 text-black px-6 py-3 font-semibold transition hover:bg-red-400 disabled:opacity-50'
-                >
-                  End Early
-                </button>
-                <button
-                  onClick={handlePause}
-                  disabled={isPending}
-                  className='bg-zinc-700 text-primary px-6 py-3 font-semibold transition hover:bg-zinc-600 disabled:opacity-50'
-                >
-                  Reset Bids
-                </button>
-              </>
-            )}
-            {state === 'ended' && (
-              <button
-                onClick={handlePause}
-                disabled={isPending}
-                className='bg-zinc-700 text-primary px-6 py-3 font-semibold transition hover:bg-zinc-600 disabled:opacity-50'
-              >
-                Reset Bids
-              </button>
-            )}
+            <p className='mt-2 text-sm text-primary/70'>
+              {pendingCount} order request{pendingCount === 1 ? '' : 's'} waiting for acceptance.
+            </p>
           </div>
         </div>
       </div>
@@ -179,7 +80,8 @@ export default function AdminPanel({ initialSession, initialBids }) {
       <h2 className='mb-4 text-xl font-semibold'>Items</h2>
       <div className='space-y-3'>
         {items.map((item) => {
-          const top = highest.get(item.id)
+          const top = sold.get(item.id)
+          const pendingOrders = pending.get(item.id) ?? []
           return (
             <div
               key={item.id}
@@ -188,21 +90,42 @@ export default function AdminPanel({ initialSession, initialBids }) {
               <div className='flex items-center justify-between'>
                 <div>
                   <p className='font-medium'>{item.name}</p>
+                  {item.isCustom && (
+                    <form action={deleteItem} className='mt-2'>
+                      <input type='hidden' name='itemId' value={item.id} />
+                      <button
+                        type='submit'
+                        className='text-xs text-red-400 transition hover:text-red-300'
+                      >
+                        Delete product
+                      </button>
+                    </form>
+                  )}
                 </div>
                 <div className='text-right'>
                   {top ? (
-                    <p className='font-semibold text-primary'>
-                      {formatNaira(top.amount)}
-                    </p>
+                    <>
+                      <p className='text-xs uppercase tracking-widest text-primary/50'>Accepted</p>
+                      <p className='font-semibold text-primary'>
+                        {formatNaira(top.amount)}
+                      </p>
+                    </>
                   ) : (
-                    <p className='text-sm text-primary/50'>No bids</p>
+                    <>
+                      <p className='text-xs uppercase tracking-widest text-primary/50'>
+                        {pendingOrders.length > 0 ? 'Pending' : 'Available'}
+                      </p>
+                      <p className='font-semibold text-primary'>
+                        {formatNaira(item.startingBid)}
+                      </p>
+                    </>
                   )}
                 </div>
               </div>
-              {top && state === 'ended' && (
+              {top && (
                 <div className='mt-3 border-t border-primary/20 pt-3 grid grid-cols-3 gap-2 text-sm'>
                   <div>
-                    <p className='text-xs uppercase tracking-widest text-primary/50'>Winner</p>
+                    <p className='text-xs uppercase tracking-widest text-primary/50'>Buyer</p>
                     <p className='font-medium'>{top.bidder_name}</p>
                   </div>
                   <div>
@@ -213,6 +136,49 @@ export default function AdminPanel({ initialSession, initialBids }) {
                     <p className='text-xs uppercase tracking-widest text-primary/50'>Phone</p>
                     <p className='font-medium'>{top.bidder_phone}</p>
                   </div>
+                  <form action={resetPurchase} className='col-span-3 mt-2'>
+                    <input type='hidden' name='orderId' value={top.id} />
+                    <input type='hidden' name='itemId' value={item.id} />
+                    <button
+                      type='submit'
+                      className='border border-amber-400/50 px-3 py-2 text-xs font-semibold text-amber-300 transition hover:bg-amber-400/10'
+                    >
+                      Reset accepted order
+                    </button>
+                  </form>
+                </div>
+              )}
+              {!top && pendingOrders.length > 0 && (
+                <div className='mt-3 space-y-3 border-t border-primary/20 pt-3'>
+                  {pendingOrders.map((order) => (
+                    <div
+                      key={order.id}
+                      className='grid gap-3 text-sm sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end'
+                    >
+                      <div>
+                        <p className='text-xs uppercase tracking-widest text-primary/50'>Pending buyer</p>
+                        <p className='font-medium'>{order.bidder_name}</p>
+                      </div>
+                      <div>
+                        <p className='text-xs uppercase tracking-widest text-primary/50'>Email</p>
+                        <p className='font-medium'>{order.bidder_email}</p>
+                      </div>
+                      <div>
+                        <p className='text-xs uppercase tracking-widest text-primary/50'>Phone</p>
+                        <p className='font-medium'>{order.bidder_phone}</p>
+                      </div>
+                      <form action={acceptPurchase}>
+                        <input type='hidden' name='orderId' value={order.id} />
+                        <input type='hidden' name='itemId' value={item.id} />
+                        <button
+                          type='submit'
+                          className='bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-emerald-400'
+                        >
+                          Accept order
+                        </button>
+                      </form>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

@@ -2,6 +2,8 @@ import { isAdmin } from '@/lib/auth/admin'
 import { createClient } from '@/lib/supabase/server'
 import LoginForm from '@/components/admin/LoginForm'
 import AdminPanel from '@/components/admin/AdminPanel'
+import ProductForm from '@/components/admin/ProductForm'
+import { getAuctionItems } from '@/lib/auction/items'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,20 +20,19 @@ export default async function AdminPage() {
 
   const supabase = await createClient()
 
-  const { data: session } = await supabase
-    .from('auction_session')
-    .select('*')
-    .limit(1)
-    .single()
-
   const { data: bids } = await supabase
     .from('bids')
     .select('*')
     .order('created_at', { ascending: false })
 
+  const auctionItems = await getAuctionItems()
+
   return (
     <main className='min-h-dvh bg-black text-primary'>
-      <AdminPanel initialSession={session} initialBids={bids ?? []} />
+      <div className='mx-auto max-w-5xl p-6'>
+        <ProductForm />
+      </div>
+      <AdminPanel initialBids={bids ?? []} items={auctionItems} />
     </main>
   )
 }

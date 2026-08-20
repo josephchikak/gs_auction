@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "GS PUSH",
-  description: "Auction web app for GS PUSH Fundraiser",
+  description: "One-of-one art pieces from GS PUSH",
 };
 
 export default function RootLayout({ children }) {

@@ -1,21 +1,29 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { formatNaira } from '@/lib/auction/session'
 
-export default function ItemCard({ item, highestBid }) {
+export default function ItemCard({ item, acceptedOrder }) {
+  const isSold = Boolean(acceptedOrder)
+
   return (
     <Link
       href={`/auction/${item.id}`}
-      className='group flex flex-col overflow-hidden border border-zinc-900/15 bg-white/40 backdrop-blur transition hover:border-zinc-900/40 hover:shadow-lg active:scale-[0.99]'
+      className={`group flex flex-col overflow-hidden border bg-white/40 backdrop-blur transition hover:shadow-lg active:scale-[0.99] ${
+        isSold
+          ? 'border-red-700/40 opacity-75'
+          : 'border-zinc-900/15 hover:border-zinc-900/40'
+      }`}
     >
       <div className='relative aspect-square overflow-hidden bg-zinc-900/5'>
-        <Image
+        <img
           src={item.image}
           alt={item.name}
-          fill
-          sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
-          className='object-cover transition group-hover:scale-105'
+          className='absolute inset-0 h-full w-full object-cover transition group-hover:scale-105'
         />
+        {isSold && (
+          <div className='absolute inset-x-3 top-3 bg-red-700 px-3 py-2 text-center text-xs font-bold uppercase tracking-widest text-white'>
+            Sold
+          </div>
+        )}
       </div>
 
       <div className='flex flex-col gap-2 p-4'>
@@ -31,18 +39,25 @@ export default function ItemCard({ item, highestBid }) {
         </div>
 
         <div className='mt-1 border-t border-zinc-900/10 pt-3'>
-          {highestBid ? (
+          {isSold ? (
             <>
               <p className='text-xs uppercase tracking-widest text-zinc-500'>
-                Highest bid
+                Sold for
               </p>
               <p className='text-xl font-bold text-primary'>
-                {formatNaira(highestBid.amount)}
+                {formatNaira(acceptedOrder.amount)}
               </p>
-              <p className='text-xs text-zinc-600'>by {highestBid.bidder_name}</p>
+              <p className='text-xs text-zinc-600'>Order accepted</p>
             </>
           ) : (
-            <p className='text-sm text-zinc-500'>No bids yet</p>
+            <>
+              <p className='text-xs uppercase tracking-widest text-zinc-500'>
+                Available
+              </p>
+              <p className='text-xl font-bold text-primary'>
+                {formatNaira(item.startingBid)}
+              </p>
+            </>
           )}
         </div>
       </div>
