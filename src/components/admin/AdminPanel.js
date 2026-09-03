@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition, useMemo } from 'react'
-import { adminLogout } from '@/lib/actions/admin'
+import { adminLogout, resetAllOrders } from '@/lib/actions/admin'
 import { deleteItem } from '@/lib/actions/admin'
 import { acceptPurchase, resetPurchase } from '@/lib/actions/orders'
 import { createClient } from '@/lib/supabase/client'
@@ -50,17 +50,28 @@ export default function AdminPanel({ initialBids, items }) {
   const pendingCount = bids.filter((bid) => bid.status === 'pending').length
 
   const handleLogout = () => startTransition(() => adminLogout())
+  const handleResetOrders = () => startTransition(() => resetAllOrders())
 
   return (
     <div className='mx-auto max-w-5xl p-6'>
-      <header className='mb-8 flex items-center justify-between'>
+      <header className='mb-8 flex items-center justify-between gap-4'>
         <h1 className='text-3xl font-bold'>Admin</h1>
-        <button
-          onClick={handleLogout}
-          className='text-sm text-primary transition hover:text-primary'
-        >
-          Sign out
-        </button>
+        <div className='flex gap-3'>
+          <button
+            onClick={handleResetOrders}
+            disabled={isPending}
+            className='text-sm px-3 py-2 text-red-400 border border-red-400/30 transition hover:bg-red-400/10 disabled:opacity-50'
+          >
+            Reset all orders
+          </button>
+          <button
+            onClick={handleLogout}
+            disabled={isPending}
+            className='text-sm text-primary transition hover:text-primary disabled:opacity-50'
+          >
+            Sign out
+          </button>
+        </div>
       </header>
 
       <div className='mb-8 text-primary border border-white/10 bg-background p-6'>

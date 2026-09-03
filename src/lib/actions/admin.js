@@ -100,3 +100,18 @@ export const deleteItem = async (formData) => {
   revalidatePath('/auction')
   revalidatePath('/auction/winners')
 }
+
+export const resetAllOrders = async () => {
+  if (!await isAdmin()) return
+
+  const supabase = createAdminClient()
+  const { error } = await supabase.from('bids').delete().neq('id', '')
+
+  if (error) return { error: error.message, success: false }
+
+  revalidatePath('/admin')
+  revalidatePath('/auction')
+  revalidatePath('/auction/winners')
+
+  return { error: null, success: true }
+}

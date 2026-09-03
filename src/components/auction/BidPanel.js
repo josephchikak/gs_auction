@@ -100,7 +100,7 @@ export default function BidPanel({ item, initialBids }) {
               ) : (
                 <>
                   <p className='text-xs uppercase tracking-widest text-zinc-500'>
-                    Price
+                    Fixed Price
                   </p>
                   <p className='mt-1 text-3xl font-bold text-primary'>
                     {formatNaira(item.startingBid)}

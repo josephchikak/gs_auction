@@ -52,7 +52,7 @@ export default function ItemCard({ item, acceptedOrder }) {
           ) : (
             <>
               <p className='text-xs uppercase tracking-widest text-zinc-500'>
-                Minimum bid 
+                Price
               </p>
               <p className='text-xl font-bold text-primary'>
                 {formatNaira(item.startingBid)}
