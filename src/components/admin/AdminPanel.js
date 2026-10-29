@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useTransition, useMemo } from 'react'
+import { useEffect, useTransition, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { adminLogout, resetAllOrders } from '@/lib/actions/admin'
 import { deleteItem } from '@/lib/actions/admin'
 import { acceptPurchase, resetPurchase } from '@/lib/actions/orders'
@@ -12,7 +13,8 @@ import {
 } from '@/lib/auction/session'
 
 export default function AdminPanel({ initialBids, items }) {
-  const [bids, setBids] = useState(initialBids)
+  const bids = initialBids
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -22,32 +24,21 @@ export default function AdminPanel({ initialBids, items }) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bids' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setBids((prev) => [payload.new, ...prev])
-            return
-          }
-
-          if (payload.eventType === 'UPDATE') {
-            setBids((prev) =>
-              prev.map((bid) =>
-                bid.id === payload.new.id ? payload.new : bid
-              )
-            )
-          }
-        }
+        () => router.refresh()
       )
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [])
+  }, [router])
 
   const sold = useMemo(() => buildAcceptedPurchaseMap(bids), [bids])
   const pending = useMemo(() => buildPendingPurchaseMap(bids), [bids])
   const soldCount = sold.size
-  const pendingCount = bids.filter((bid) => bid.status === 'pending').length
+  const pendingOrders = useMemo(() => bids.filter((bid) => bid.status === 'pending'), [bids])
+  const pendingCount = pendingOrders.length
+  const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])
 
   const handleLogout = () => startTransition(() => adminLogout())
   const handleResetOrders = () => startTransition(() => resetAllOrders())
@@ -87,6 +78,57 @@ export default function AdminPanel({ initialBids, items }) {
           </div>
         </div>
       </div>
+
+      <section className='mb-8' aria-labelledby='pending-orders-heading'>
+        <h2 id='pending-orders-heading' className='mb-4 text-xl font-semibold'>Pending orders</h2>
+        {pendingOrders.length === 0 && <p className='text-primary/70'>No pending orders.</p>}
+        <div className='space-y-3'>
+          {pendingOrders.map((order) => {
+            const item = itemsById.get(order.item_id)
+            const isSold = sold.has(order.item_id)
+
+            return (
+              <article key={order.id} className='border border-primary bg-background p-4 text-primary'>
+                <div className='flex flex-wrap justify-between gap-3'>
+                  <div>
+                    <h3 className='font-semibold'>{item?.name ?? order.item_id}</h3>
+                    <p className='break-all text-xs text-primary/70'>Item ID: {order.item_id}</p>
+                    {!item && <p className='mt-1 text-sm'>This item is no longer in the current catalogue. Review the original item ID before accepting.</p>}
+                    {isSold && <p className='mt-1 text-sm'>This item already has an accepted order.</p>}
+                  </div>
+                  <p className='font-semibold'>{formatNaira(order.amount)}</p>
+                </div>
+                <p className='mt-2 text-xs text-primary/70'>Placed: {order.created_at}</p>
+                <div className='mt-3 grid gap-3 border-t border-primary/20 pt-3 text-sm sm:grid-cols-3'>
+                  <div>
+                    <p className='text-xs uppercase tracking-widest text-primary/50'>Pending buyer</p>
+                    <p className='break-words font-medium'>{order.bidder_name}</p>
+                  </div>
+                  <div>
+                    <p className='text-xs uppercase tracking-widest text-primary/50'>Email</p>
+                    <p className='break-all font-medium'>{order.bidder_email}</p>
+                  </div>
+                  <div>
+                    <p className='text-xs uppercase tracking-widest text-primary/50'>Phone</p>
+                    <p className='break-words font-medium'>{order.bidder_phone}</p>
+                  </div>
+                </div>
+                <form action={acceptPurchase} className='mt-3'>
+                  <input type='hidden' name='orderId' value={order.id} />
+                  <input type='hidden' name='itemId' value={order.item_id} />
+                  <button
+                    type='submit'
+                    disabled={isSold}
+                    className='bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-emerald-400 disabled:opacity-50'
+                  >
+                    Accept order
+                  </button>
+                </form>
+              </article>
+            )
+          })}
+        </div>
+      </section>
 
       <h2 className='mb-4 text-xl font-semibold'>Items</h2>
       <div className='space-y-3'>
@@ -159,39 +201,7 @@ export default function AdminPanel({ initialBids, items }) {
                   </form>
                 </div>
               )}
-              {!top && pendingOrders.length > 0 && (
-                <div className='mt-3 space-y-3 border-t border-primary/20 pt-3'>
-                  {pendingOrders.map((order) => (
-                    <div
-                      key={order.id}
-                      className='grid gap-3 text-sm sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end'
-                    >
-                      <div>
-                        <p className='text-xs uppercase tracking-widest text-primary/50'>Pending buyer</p>
-                        <p className='font-medium'>{order.bidder_name}</p>
-                      </div>
-                      <div>
-                        <p className='text-xs uppercase tracking-widest text-primary/50'>Email</p>
-                        <p className='font-medium'>{order.bidder_email}</p>
-                      </div>
-                      <div>
-                        <p className='text-xs uppercase tracking-widest text-primary/50'>Phone</p>
-                        <p className='font-medium'>{order.bidder_phone}</p>
-                      </div>
-                      <form action={acceptPurchase}>
-                        <input type='hidden' name='orderId' value={order.id} />
-                        <input type='hidden' name='itemId' value={item.id} />
-                        <button
-                          type='submit'
-                          className='bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-emerald-400'
-                        >
-                          Accept order
-                        </button>
-                      </form>
-                    </div>
-                  ))}
-                </div>
-              )}
+
             </div>
           )
         })}
